@@ -20,6 +20,8 @@ class Game:
         self.turn_count = 0
 
         self.player = MachinePlayer('Player', 1, self.playfield.map)
+
+        # Comment this line if you want Bot vs BOt game
         self.player = HumanPlayer('Player', 1, self.playfield.map, self.playfield.tile_group)
         self.enemy = MachinePlayer('Enemy', 2, self.playfield.map)
         self.player.assign_opponent(self.enemy)
