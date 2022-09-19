@@ -34,10 +34,10 @@ class Game:
             if not self.game_over():
                 self.turn_handler.turn()
             else:
-                if self.turn_handler.turn_count:
-                    winner = self.turn_handler.player1.name
-                else:
+                if self.turn_handler.turn_count % 2:
                     winner = self.turn_handler.player2.name
+                else:
+                    winner = self.turn_handler.player1.name
                 print('\nGame Over!\n', winner, 'is winner')
 
             pygame.display.update()
