@@ -1,8 +1,8 @@
 import pygame
 import sys
-import random
 from playfield import Playfield
 from players import HumanPlayer, MachinePlayer
+from turn import TurnHandler
 from settings import *
 
 
@@ -15,17 +15,14 @@ class Game:
 
         self.playfield = Playfield()
 
-        # 0 is player, 1 is enemy
-        self.turn = random.randint(0, 1)
-        self.turn_count = 0
-
         self.player = MachinePlayer('Player', 1, self.playfield.map)
-
-        # Comment this line if you want Bot vs BOt game
+        # Comment this line if you want Bot vs Bot game
         self.player = HumanPlayer('Player', 1, self.playfield.map, self.playfield.tile_group)
         self.enemy = MachinePlayer('Enemy', 2, self.playfield.map)
         self.player.assign_opponent(self.enemy)
         self.enemy.assign_opponent(self.player)
+
+        self.turn_handler = TurnHandler(self.playfield.tile_group, self.player, self.enemy)
 
     def run(self):
         while True:
@@ -35,42 +32,12 @@ class Game:
                     sys.exit()
 
             if not self.game_over():
-                print('\nTurn', self.turn_count)
-                if self.turn:
-                    turn_owner = self.enemy
-                    self.turn = 0
-                else:
-                    turn_owner = self.player
-                    self.turn = 1
-
-                x = y = None
-
-                if type(turn_owner).__name__ == 'HumanPlayer':
-                    move_received = False
-                    while not move_received:
-                        for event in pygame.event.get():
-                            if event.type == pygame.QUIT:
-                                pygame.quit()
-                                sys.exit()
-                            if event.type == pygame.MOUSEBUTTONDOWN and event.button == 1:
-                                try:
-                                    x, y = turn_owner.select_move(event.pos)
-                                    move_received = True
-                                except TypeError:
-                                    pass
-                else:
-                    x, y = turn_owner.select_move(self.turn_count)
-
-                for tile in self.playfield.tile_group:
-                    if tile.map_pos == (x, y):
-                        tile.fill_tile(turn_owner.dot_color)
-                self.playfield.tile_group.draw(self.screen)
-                self.turn_count += 1
+                self.turn_handler.turn()
             else:
-                if self.turn:
-                    winner = self.player.name
+                if self.turn_handler.turn_count:
+                    winner = self.turn_handler.player1.name
                 else:
-                    winner = self.enemy.name
+                    winner = self.turn_handler.player2.name
                 print('\nGame Over!\n', winner, 'is winner')
 
             pygame.display.update()
@@ -145,4 +112,4 @@ class Game:
 
 if __name__ == "__main__":
     game = Game()
-    restart = game.run()
+    game.run()

@@ -47,8 +47,8 @@ class MachinePlayer(Player):
             self.opponent_dot_num = 1
         self.dots = []
 
-    def select_move(self, turn_count):
-        if turn_count == 0:
+    def select_move(self):
+        if not self.opponent.last_move:
             x, y = self.select_random_tile()
         else:
             self.dots.append(self.opponent.last_move)
