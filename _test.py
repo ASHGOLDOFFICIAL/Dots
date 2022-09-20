@@ -1,10 +1,10 @@
 import pygame
 from settings import *
-from playfield import Playfield
+from game_field import GameField
 
 pygame.init()
 screen = pygame.display.set_mode((SCREEN_WIDTH, SCREEN_HEIGHT))
-playfield = Playfield()
+playfield = GameField()
 
 last_x_index = len(playfield.map[0]) - 1
 last_y_index = len(playfield.map) - 1
