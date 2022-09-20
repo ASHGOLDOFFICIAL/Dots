@@ -1,8 +1,7 @@
 import pygame
 import sys
-from playfield import Playfield
-from players import HumanPlayer, MachinePlayer
-from turn import TurnHandler
+from game_round import GameRound
+from screens import IntroScreen, GameFieldScreen, GameOverScreen
 from settings import *
 
 
@@ -10,19 +9,14 @@ class Game:
     def __init__(self):
         pygame.init()
         pygame.display.set_caption('Dots')
-        self.screen = pygame.display.set_mode((SCREEN_WIDTH, SCREEN_HEIGHT))
+        self.screen = pygame.display.set_mode((SCREEN_WIDTH, SCREEN_HEIGHT), pygame.SCALED)
         self.clock = pygame.time.Clock()
 
-        self.playfield = Playfield()
+        self.current_screen = IntroScreen()
+        self.game_round = None
+        self.winner_name = None
 
-        self.player = MachinePlayer('Player', 1, self.playfield.map)
-        # Comment this line if you want Bot vs Bot game
-        self.player = HumanPlayer('Player', 1, self.playfield.map, self.playfield.tile_group)
-        self.enemy = MachinePlayer('Enemy', 2, self.playfield.map)
-        self.player.assign_opponent(self.enemy)
-        self.enemy.assign_opponent(self.player)
-
-        self.turn_handler = TurnHandler(self.playfield.tile_group, self.player, self.enemy)
+        self.round_count = 1
 
     def run(self):
         while True:
@@ -30,84 +24,39 @@ class Game:
                 if event.type == pygame.QUIT:
                     pygame.quit()
                     sys.exit()
+                elif event.type == pygame.MOUSEBUTTONUP and event.button == 1:
+                    if self.current_screen:
+                        self.current_screen.click(event.pos)
 
-            if not self.game_over():
-                self.turn_handler.turn()
-            else:
-                if self.turn_handler.turn_count % 2:
-                    winner = self.turn_handler.player2.name
-                else:
-                    winner = self.turn_handler.player1.name
-                print('\nGame Over!\n', winner, 'is winner')
+            if type(self.current_screen).__name__ == 'IntroScreen':
+                self.current_screen.draw()
+                if self.current_screen.stop:
+                    self.current_screen = None
+
+            elif not self.game_round:
+                print('\n\n\n=== ROUND', self.round_count, '===')
+                self.game_round = GameRound()
+                self.current_screen = GameFieldScreen(self.game_round)
+                self.current_screen.draw()
+
+            elif self.game_round and not self.winner_name:
+                turn_made, self.winner_name = self.game_round.run()
+                if turn_made:
+                    self.current_screen.update()
+
+            elif self.winner_name and type(self.current_screen).__name__ == 'GameFieldScreen':
+                self.current_screen = GameOverScreen(self.winner_name)
+
+            elif type(self.current_screen).__name__ == 'GameOverScreen':
+                self.current_screen.draw()
+                if self.current_screen.stop:
+                    self.current_screen = None
+                    self.winner_name = None
+                    self.game_round = None
+                    self.round_count += 1
 
             pygame.display.update()
             self.clock.tick(FPS)
-
-    def game_over(self):
-        str_rows = []
-        last_x_index = len(self.playfield.map[0]) - 1
-        last_y_index = len(self.playfield.map) - 1
-
-        # Check if 5 in horizontal
-        for row in self.playfield.map:
-            str_row = ''.join([str(item) for item in row])
-            if '11111' in str_row or '22222' in str_row:
-                return True
-            str_rows.append(str_row)
-
-        # Check if 5 in increasing diagonal
-        # Move diagonal to the right
-        for k in range(len(self.playfield.map[0])):
-            s = ''
-            for i in range(len(self.playfield.map)):
-                x = i + k
-                y = i
-                if 0 <= x <= last_x_index and 0 <= y <= last_y_index:
-                    s += str(self.playfield.map[-y][x])
-            if '11111' in s or '22222' in s:
-                return True
-        # Move diagonal up
-        for k in range(1, len(self.playfield.map)):
-            s = ''
-            for i in range(len(self.playfield.map)):
-                x = i
-                y = i + k
-                if 0 <= x <= last_x_index and 0 <= y <= last_y_index:
-                    s += str(self.playfield.map[-y][x])
-            if '11111' in s or '22222' in s:
-                return True
-
-        # Check if 5 in decreasing diagonal
-        # Move diagonal to the right
-        for k in range(len(self.playfield.map[0])):
-            s = ''
-            for i in range(len(self.playfield.map)):
-                x = i + k
-                y = i
-                if 0 <= x <= last_x_index and 0 <= y <= last_y_index:
-                    s += str(self.playfield.map[y][x])
-            if '11111' in s or '22222' in s:
-                return True
-        # Move diagonal down
-        for k in range(1, len(self.playfield.map)):
-            s = ''
-            for i in range(len(self.playfield.map)):
-                x = i
-                y = i + k
-                if 0 <= x <= last_x_index and 0 <= y <= last_y_index:
-                    s += str(self.playfield.map[y][x])
-            if '11111' in s or '22222' in s:
-                return True
-
-        # Check if 5 in vertical
-        for i in range(len(str_rows[0])):
-            str_col = ''
-            for str_row in str_rows:
-                str_col += str_row[i]
-            if '11111' in str_col or '22222' in str_col:
-                return True
-
-        return False
 
 
 if __name__ == "__main__":

@@ -1,45 +1,97 @@
+import itertools
 import random
-from combination_priority import CombinationPriority
+from tile import DotColor
+
+
+def create_combination_priority_dict():
+    # Get all possible combinations
+    all_combinations = list(itertools.product('0ope', repeat=5))
+    comb_list = []
+
+    # Make strings from tuples and append them to new list
+    for comb in all_combinations:
+        comb_list.append(''.join(comb))
+
+    comb_list = list(filter(lambda c: c[0] not in ('0', 'e') and
+                                      not c.count('0') == 0 and
+                                      not (c.count('e') == 4 and c[1:] == 'eeee') and
+                                      not (c.count('e') == 3 and c[2:] == 'eee') and
+                                      not (c.count('e') == 2 and c[3:] == 'ee') and
+                                      not (c.count('e') == 1 and c[4] == 'e'),
+                            comb_list))
+
+    comb_priority_dict = {}
+    for i in range(10):
+        comb_priority_dict[str(i)] = []
+
+    unused_comb = []
+    for c in comb_list:
+        if c.count('p') == 4 and c.count('0') == 1:
+            comb_priority_dict['0'].append(c)
+        elif c.count('o') == 4 and c.count('0') == 1:
+            comb_priority_dict['1'].append(c)
+        elif c.count('p') == 3 and c.count('0') == 2:
+            comb_priority_dict['2'].append(c)
+        elif c.count('o') == 3 and c.count('0') == 2:
+            comb_priority_dict['4'].append(c)
+        elif c.count('p') == 2:
+            comb_priority_dict['5'].append(c)
+        elif c.count('o') == 2:
+            comb_priority_dict['6'].append(c)
+        elif c.count('p') == 1 or c.count('o') == 1:
+            comb_priority_dict['7'].append(c)
+        elif c.count('e') == 1:
+            comb_priority_dict['8'].append(c)
+        elif c.count('e') >= 2:
+            comb_priority_dict['9'].append(c)
+        else:
+            unused_comb.append(c)
+
+    return comb_priority_dict
 
 
 class Player:
-    def __init__(self, name, dot_num, playfield_map):
-        self.playfield_map = playfield_map
-        self.last_move = None
+    def __init__(self, name, dot_num, game_field_map):
+        self.game_field_map = game_field_map
         self.name = name
+
         self.dot_num = dot_num
         if self.dot_num == 1:
-            self.dot_color = 0
+            self.dot_color = DotColor.BLACK
         else:
-            self.dot_color = 1
+            self.dot_color = DotColor.WHITE
+
+        self.opponent = None
+        self.last_move = None
 
     def assign_opponent(self, opponent):
         self.opponent = opponent
 
+    def select_move(self):
+        raise NotImplementedError
+
 
 class HumanPlayer(Player):
-    def __init__(self, name, dot_num, playfield_map, tile_group):
-        super().__init__(name, dot_num, playfield_map)
-        self.tile_group = tile_group
+    def __init__(self, name, dot_num, game_field_map):
+        super().__init__(name, dot_num, game_field_map)
     
-    def select_move(self, pos):
-        for tile in self.tile_group:
-            if tile.rect.collidepoint(pos) and not self.playfield_map[tile.map_pos[1]][tile.map_pos[0]]:
-                x, y = tile.map_pos[0], tile.map_pos[1]
-                self.playfield_map[y][x] = self.dot_num
-                self.last_move = (x, y)
-                print(self.name + "'s move is", self.last_move)
-                return x, y
+    def select_move(self, tile):
+        if not self.game_field_map[tile.map_pos[1]][tile.map_pos[0]]:
+            x, y = tile.map_pos[0], tile.map_pos[1]
+            self.game_field_map[y][x] = self.dot_num
+            self.last_move = (x, y)
+            pos = x, y
+            return pos
 
 
 class MachinePlayer(Player):
-    combination_priority = CombinationPriority()
+    combination_priority = create_combination_priority_dict()
     
-    def __init__(self, name, dot_num, playfield_map):
-        super().__init__(name, dot_num, playfield_map)
-        self.playfield_map = playfield_map
-        self.last_x_index = len(playfield_map[0]) - 1
-        self.last_y_index = len(playfield_map) - 1
+    def __init__(self, name, dot_num, game_field_map):
+        super().__init__(name, dot_num, game_field_map)
+        self.playfield_map = game_field_map
+        self.last_x_index = len(game_field_map[0]) - 1
+        self.last_y_index = len(game_field_map) - 1
 
         if self.dot_num == 1:
             self.opponent_dot_num = 2
@@ -58,7 +110,6 @@ class MachinePlayer(Player):
         self.dots.append(self.last_move)
         self.dots.sort()
         self.playfield_map[y][x] = self.dot_num
-        print(self.name + "'s move is", self.last_move)
         return x, y
 
     def analyze(self):
@@ -72,13 +123,9 @@ class MachinePlayer(Player):
 
         for priority in range(len(best_moves)):
             priority = str(priority)
-
             if best_moves[priority]:
-                print(self.name, 'selects best move')
-                # print(best_moves[priority])
                 return best_moves[priority][random.randrange(len(best_moves[priority]))]
 
-        print(self.name, 'selects random tile')
         return self.select_random_tile()
 
     def check_neighbours(self, x, y, moves_dict):
