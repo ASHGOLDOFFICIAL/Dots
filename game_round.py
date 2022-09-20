@@ -20,6 +20,8 @@ class GameRound:
         # player1 = MachinePlayer('Player', 1, self.game_field.map)
         player2 = MachinePlayer('Enemy', 2, self.game_field.map)
         # player1.assign_opponent(player2)
+        # test
+        # test
         player2.assign_opponent(player1)
         if random.randint(0, 1):
             self.players.extend([player1, player2])
